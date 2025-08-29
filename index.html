@@ -734,7 +734,7 @@
 
                 if (error) throw error;
 
-                if (data && password === 'museum123') { // Temporary simple check
+                if (data && data.password_hash === password) {
                     isAdminLoggedIn = true;
                     document.getElementById('adminPanel').style.display = 'block';
                     closeModal('adminModal');
