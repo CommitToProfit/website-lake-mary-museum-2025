@@ -724,15 +724,28 @@
             const password = document.getElementById('password').value;
 
             try {
-                // For now, we'll use a simple check since we haven't implemented password hashing yet
-                // In production, you'd want to hash passwords and use Supabase Auth
+                console.log('Attempting login with username:', username, 'password:', password);
+                
+                // First, let's see all users in the table for debugging
+                const { data: allUsers, error: allError } = await supabase
+                    .from('admin_users')
+                    .select('*');
+                
+                console.log('All users in database:', allUsers, allError);
+                
+                // Now try the specific query
                 const { data, error } = await supabase
                     .from('admin_users')
                     .select('*')
                     .eq('username', username)
                     .single();
 
-                if (error) throw error;
+                console.log('Login query result:', data, error);
+                
+                if (error) {
+                    console.log('Database error:', error);
+                    throw error;
+                }
 
                 if (data && data.password_hash === password) {
                     isAdminLoggedIn = true;
