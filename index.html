@@ -3,8 +3,532 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lake Mary Historical Museum - Calendar</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>Lake Mary Historical Museum</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Georgia', serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f9f7f4;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Header */
+        header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 1rem 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo-icon {
+            width: 50px;
+            height: 50px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .logo h1 {
+            font-size: 1.8rem;
+            font-weight: normal;
+        }
+
+        .admin-login {
+            background: rgba(255,255,255,0.2);
+            padding: 8px 16px;
+            border-radius: 25px;
+            text-decoration: none;
+            color: white;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255,255,255,0.3);
+            cursor: pointer;
+        }
+
+        .admin-login:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+
+        /* Navigation */
+        nav {
+            background: rgba(255,255,255,0.95);
+            padding: 1rem 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: #2c3e50;
+            font-weight: 500;
+            padding: 10px 20px;
+            border-radius: 25px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-links a:hover, .nav-links a.active {
+            background: #3498db;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        /* Main Content */
+        main {
+            padding: 2rem 0;
+        }
+
+        .hero {
+            background: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600"><rect fill="%23e8f4f8" width="1200" height="600"/><g fill="%23bdd8e0"><polygon points="0,600 200,400 400,500 600,300 800,400 1000,200 1200,300 1200,600"/></g></svg>');
+            color: white;
+            text-align: center;
+            padding: 4rem 0;
+            margin-bottom: 3rem;
+            border-radius: 10px;
+        }
+
+        .hero h2 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            max-width: 600px;
+            margin: 0 auto;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+
+        /* Calendar Section */
+        .calendar-section {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-bottom: 3rem;
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .calendar-nav {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .calendar-nav button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .calendar-nav button:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        .calendar-tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .calendar-tab {
+            padding: 10px 20px;
+            background: #ecf0f1;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .calendar-tab.active {
+            background: #3498db;
+            color: white;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 1px;
+            background: #bdc3c7;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .calendar-day {
+            background: white;
+            padding: 15px 5px;
+            text-align: center;
+            min-height: 80px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .calendar-day:hover {
+            background: #ecf0f1;
+        }
+
+        .calendar-day.header {
+            background: #3498db;
+            color: white;
+            font-weight: bold;
+            min-height: 40px;
+            padding: 10px 5px;
+            cursor: default;
+        }
+
+        .calendar-day.other-month {
+            background: #f8f9fa;
+            color: #6c757d;
+        }
+
+        .calendar-day.today {
+            background: #e8f5e8;
+            border: 2px solid #27ae60;
+        }
+
+        .event-dot {
+            width: 8px;
+            height: 8px;
+            background: #e74c3c;
+            border-radius: 50%;
+            position: absolute;
+            top: 5px;
+            right: 5px;
+        }
+
+        .event-dot.historical {
+            background: #f39c12;
+        }
+
+        /* Events Section */
+        .events-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .event-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .event-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+
+        .event-card h3 {
+            color: #2c3e50;
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+        }
+
+        .event-date {
+            color: #3498db;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .event-description {
+            color: #666;
+            line-height: 1.5;
+        }
+
+        .event-type {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+        }
+
+        .event-type.upcoming {
+            background: #e8f5e8;
+            color: #27ae60;
+        }
+
+        .event-type.historical {
+            background: #fff3e0;
+            color: #f39c12;
+        }
+
+        /* Loading State */
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+
+        .error {
+            background: #fee;
+            border: 1px solid #fcc;
+            color: #c33;
+            padding: 1rem;
+            border-radius: 5px;
+            margin: 1rem 0;
+        }
+
+        .success {
+            background: #efe;
+            border: 1px solid #cfc;
+            color: #363;
+            padding: 1rem;
+            border-radius: 5px;
+            margin: 1rem 0;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 2rem;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            animation: modalSlideIn 0.3s ease-out;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            position: absolute;
+            top: 10px;
+            right: 20px;
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        .modal h2 {
+            color: #2c3e50;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .modal input, .modal textarea, .modal select {
+            padding: 12px;
+            border: 2px solid #ecf0f1;
+            border-radius: 5px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .modal input:focus, .modal textarea:focus, .modal select:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .modal textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .modal button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .modal button:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        /* Admin Panel */
+        .admin-panel {
+            background: #2c3e50;
+            color: white;
+            padding: 1rem 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .admin-panel h2 {
+            display: inline-block;
+            margin-right: 2rem;
+        }
+
+        .admin-btn {
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 0 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .admin-btn:hover {
+            background: #219a52;
+            transform: translateY(-2px);
+        }
+
+        .admin-btn.logout {
+            background: #e74c3c;
+        }
+
+        .admin-btn.logout:hover {
+            background: #c0392b;
+        }
+
+        .delete-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin-top: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .delete-btn:hover {
+            background: #c0392b;
+            transform: translateY(-1px);
+        }
+
+        .event-card .delete-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 5px 10px;
+            font-size: 0.8rem;
+        }
+
+        footer {
+            background: #2c3e50;
+            color: white;
+            padding: 2rem 0;
+            text-align: center;
+        }
+
+        .footer-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .footer-section h3 {
+            margin-bottom: 1rem;
+            color: #3498db;
+        }
+
+        .footer-section p, .footer-section a {
+            color: #ecf0f1;
+            text-decoration: none;
+        }
+
+        .footer-section a:hover {
+            color: #3498db;
+        }
+
+        .status-banner {
+            background: rgba(255,255,255,0.1);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            border-left: 4px solid #f39c12;
+        }
+    </style>
 </head>
 <body>
     <header>
@@ -22,11 +546,24 @@
         </div>
     </header>
 
+    <nav>
+        <div class="container">
+            <div class="nav-links">
+                <a href="#" class="active">Home</a>
+                <a href="#calendar">Calendar</a>
+                <a href="#exhibits">Exhibits</a>
+                <a href="#collections">Collections</a>
+                <a href="#visit">Visit</a>
+                <a href="#about">About</a>
+            </div>
+        </div>
+    </nav>
+
     <main>
         <div class="container">
             <section class="hero">
-                <h2>Museum Events & Calendar</h2>
-                <p>Stay up to date with our latest events, exhibits, and special programs. The Lake Mary Historical Museum is currently preparing exciting new exhibits and will reopen with enhanced displays.</p>
+                <h2>Welcome to Lake Mary's Heritage</h2>
+                <p>The Lake Mary Historical Museum exists to preserve and promote the history of the city and the surrounding area. We're currently preparing exciting new exhibits and will reopen with enhanced displays. Discover our rich heritage through artifacts, photographs, documents and other materials that tell the story of Lake Mary and surrounding communities.</p>
                 <div class="status-banner">
                     <p><strong>📍 Current Status:</strong> Planning exciting new exhibits - check our calendar for upcoming events!</p>
                 </div>
@@ -34,7 +571,7 @@
 
             <section class="calendar-section" id="calendar">
                 <div class="calendar-header">
-                    <h2>Events Calendar</h2>
+                    <h2>Museum Calendar</h2>
                     <div class="calendar-nav">
                         <button onclick="changeMonth(-1)">‹ Previous</button>
                         <span id="current-month">August 2025</span>
@@ -49,12 +586,12 @@
                 </div>
 
                 <div class="calendar-grid" id="calendar-grid">
-                    <!-- Calendar will be generated by JavaScript -->
+                    <div class="loading">Loading calendar...</div>
                 </div>
             </section>
 
             <section class="events-section" id="events">
-                <!-- Events will be populated by JavaScript -->
+                <div class="loading">Loading events...</div>
             </section>
         </div>
     </main>
@@ -64,10 +601,8 @@
             <div class="footer-content">
                 <div class="footer-section">
                     <h3>Visit Us</h3>
-                    <p>Tuesday through Saturday<br>
-                    10am to 3pm</p>
-                    <p>123 Lake Mary Blvd<br>
-                    Lake Mary, FL 32746</p>
+                    <p>Tuesday through Saturday<br>10am to 3pm</p>
+                    <p>123 Lake Mary Blvd<br>Lake Mary, FL 32746</p>
                 </div>
                 <div class="footer-section">
                     <h3>Contact</h3>
@@ -85,25 +620,17 @@
         </div>
     </footer>
 
-    <!-- Admin Modal -->
+    <!-- Admin Login Modal -->
     <div id="adminModal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="closeModal('adminModal')">&times;</span>
             <h2>Admin Login</h2>
+            <div id="login-error"></div>
             <form id="adminForm">
                 <input type="text" id="username" placeholder="Username" required>
                 <input type="password" id="password" placeholder="Password" required>
                 <button type="submit">Login</button>
             </form>
-            <p style="margin-top: 1rem; font-size: 0.9rem; color: #666;">Demo credentials: admin / museum123</p>
-        </div>
-    </div>
-
-    <!-- Event Details Modal -->
-    <div id="eventModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeModal('eventModal')">&times;</span>
-            <div id="eventDetails"></div>
         </div>
     </div>
 
@@ -112,10 +639,13 @@
         <div class="modal-content">
             <span class="close" onclick="closeModal('addEventModal')">&times;</span>
             <h2>Add New Event</h2>
+            <div id="event-error"></div>
             <form id="addEventForm">
                 <input type="text" id="eventTitle" placeholder="Event Title" required>
                 <textarea id="eventDescription" placeholder="Event Description" required></textarea>
                 <input type="date" id="eventDate" required>
+                <input type="text" id="eventTime" placeholder="Event Time" value="10:00 AM - 4:00 PM">
+                <input type="text" id="eventLocation" placeholder="Event Location" value="Museum Gallery">
                 <select id="eventType" required>
                     <option value="">Select Event Type</option>
                     <option value="upcoming">Upcoming Event</option>
@@ -123,6 +653,14 @@
                 </select>
                 <button type="submit">Add Event</button>
             </form>
+        </div>
+    </div>
+
+    <!-- Event Details Modal -->
+    <div id="eventModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('eventModal')">&times;</span>
+            <div id="eventDetails"></div>
         </div>
     </div>
 
@@ -135,6 +673,423 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <!-- Supabase JavaScript Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <script>
+        // *** REPLACE THESE WITH YOUR ACTUAL SUPABASE CREDENTIALS ***
+        const SUPABASE_URL = 'YOUR_SUPABASE_URL_HERE'
+        const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY_HERE'
+        
+        // Initialize Supabase client
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+
+        // Global state
+        let currentDate = new Date();
+        let currentMonth = currentDate.getMonth();
+        let currentYear = currentDate.getFullYear();
+        let currentTab = 'all';
+        let isAdminLoggedIn = false;
+        let events = [];
+
+        // Initialize the app when page loads
+        document.addEventListener('DOMContentLoaded', async function() {
+            await loadEvents();
+            generateCalendar();
+            updateEventsList();
+        });
+
+        // Load events from Supabase
+        async function loadEvents() {
+            try {
+                const { data, error } = await supabase
+                    .from('events')
+                    .select('*')
+                    .order('date', { ascending: true });
+
+                if (error) throw error;
+                
+                events = data || [];
+                console.log('Loaded events:', events);
+            } catch (error) {
+                console.error('Error loading events:', error);
+                showError('Failed to load events from database');
+            }
+        }
+
+        // Admin login
+        async function handleAdminLogin(e) {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                // For now, we'll use a simple check since we haven't implemented password hashing yet
+                // In production, you'd want to hash passwords and use Supabase Auth
+                const { data, error } = await supabase
+                    .from('admin_users')
+                    .select('*')
+                    .eq('username', username)
+                    .single();
+
+                if (error) throw error;
+
+                if (data && password === 'museum123') { // Temporary simple check
+                    isAdminLoggedIn = true;
+                    document.getElementById('adminPanel').style.display = 'block';
+                    closeModal('adminModal');
+                    updateEventsList(); // Refresh to show delete buttons
+                    showSuccess('Admin login successful!');
+                    
+                    // Update last_login
+                    await supabase
+                        .from('admin_users')
+                        .update({ last_login: new Date().toISOString() })
+                        .eq('id', data.id);
+                } else {
+                    showError('Invalid username or password', 'login-error');
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                showError('Login failed. Please try again.', 'login-error');
+            }
+        }
+
+        // Add new event
+        async function handleAddEvent(e) {
+            e.preventDefault();
+            
+            if (!isAdminLoggedIn) {
+                showError('You must be logged in as an admin to add events');
+                return;
+            }
+
+            const eventData = {
+                title: document.getElementById('eventTitle').value,
+                description: document.getElementById('eventDescription').value,
+                date: document.getElementById('eventDate').value,
+                time: document.getElementById('eventTime').value || '10:00 AM - 4:00 PM',
+                location: document.getElementById('eventLocation').value || 'Museum Gallery',
+                type: document.getElementById('eventType').value
+            };
+
+            try {
+                const { data, error } = await supabase
+                    .from('events')
+                    .insert([eventData])
+                    .select()
+                    .single();
+
+                if (error) throw error;
+
+                events.push(data);
+                closeModal('addEventModal');
+                generateCalendar();
+                updateEventsList();
+                showSuccess('Event added successfully!');
+                document.getElementById('addEventForm').reset();
+            } catch (error) {
+                console.error('Error adding event:', error);
+                showError('Failed to add event. Please try again.', 'event-error');
+            }
+        }
+
+        // Delete event
+        async function deleteEvent(eventId) {
+            if (!isAdminLoggedIn) {
+                showError('You must be logged in as an admin to delete events');
+                return;
+            }
+
+            if (!confirm('Are you sure you want to delete this event?')) return;
+
+            try {
+                const { error } = await supabase
+                    .from('events')
+                    .delete()
+                    .eq('id', eventId);
+
+                if (error) throw error;
+
+                events = events.filter(event => event.id !== eventId);
+                generateCalendar();
+                updateEventsList();
+                closeModal('eventModal');
+                showSuccess('Event deleted successfully!');
+            } catch (error) {
+                console.error('Error deleting event:', error);
+                showError('Failed to delete event. Please try again.');
+            }
+        }
+
+        // Logout
+        function logout() {
+            isAdminLoggedIn = false;
+            document.getElementById('adminPanel').style.display = 'none';
+            updateEventsList();
+            showSuccess('Logged out successfully!');
+        }
+
+        // Calendar functions
+        function generateCalendar() {
+            const monthNames = ["January", "February", "March", "April", "May", "June",
+                "July", "August", "September", "October", "November", "December"];
+            const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+            
+            document.getElementById('current-month').textContent = `${monthNames[currentMonth]} ${currentYear}`;
+            
+            const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+            const today = new Date();
+            
+            let html = '';
+            
+            // Header row
+            dayNames.forEach(day => {
+                html += `<div class="calendar-day header">${day}</div>`;
+            });
+            
+            // Empty cells for days before the first day of the month
+            for (let i = 0; i < firstDay; i++) {
+                html += '<div class="calendar-day other-month"></div>';
+            }
+            
+            // Days of the month
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const isToday = today.getDate() === day && today.getMonth() === currentMonth && today.getFullYear() === currentYear;
+                
+                let dayClass = 'calendar-day';
+                if (isToday) dayClass += ' today';
+                
+                const dayEvents = events.filter(event => {
+                    if (currentTab === 'all') return event.date === dateStr;
+                    return event.date === dateStr && event.type === currentTab;
+                });
+                
+                let eventDots = '';
+                dayEvents.forEach(event => {
+                    eventDots += `<div class="event-dot ${event.type}" title="${event.title}"></div>`;
+                });
+                
+                html += `<div class="${dayClass}" onclick="showDayEvents('${dateStr}')">${day}${eventDots}</div>`;
+            }
+            
+            document.getElementById('calendar-grid').innerHTML = html;
+        }
+
+        function changeMonth(direction) {
+            currentMonth += direction;
+            if (currentMonth > 11) {
+                currentMonth = 0;
+                currentYear++;
+            } else if (currentMonth < 0) {
+                currentMonth = 11;
+                currentYear--;
+            }
+            generateCalendar();
+            updateEventsList();
+        }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.calendar-tab').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            generateCalendar();
+            updateEventsList();
+        }
+
+        function showDayEvents(date) {
+            const dayEvents = events.filter(event => event.date === date);
+            if (dayEvents.length > 0) {
+                let eventDetails = `<h3>Events on ${formatDate(date)}</h3>`;
+                dayEvents.forEach(event => {
+                    eventDetails += `
+                        <div style="padding: 1rem; border: 1px solid #ecf0f1; border-radius: 5px; margin: 1rem 0;">
+                            <h4>${event.title}</h4>
+                            <p><strong>Type:</strong> ${event.type === 'upcoming' ? 'Upcoming Event' : 'Historical Event'}</p>
+                            <p><strong>Time:</strong> ${event.time}</p>
+                            <p><strong>Location:</strong> ${event.location}</p>
+                            <p><strong>Description:</strong> ${event.description}</p>
+                            ${isAdminLoggedIn ? `<button onclick="deleteEvent(${event.id})" class="delete-btn">Delete Event</button>` : ''}
+                        </div>
+                    `;
+                });
+                document.getElementById('eventDetails').innerHTML = eventDetails;
+                document.getElementById('eventModal').style.display = 'block';
+            } else {
+                document.getElementById('eventDetails').innerHTML = `
+                    <h3>No events on ${formatDate(date)}</h3>
+                    <p>No events scheduled for this date.</p>
+                    ${isAdminLoggedIn ? '<p><button onclick="showAddEventModal(); document.getElementById(\'eventDate\').value=\'' + date + '\'" class="admin-btn">Add Event for This Date</button></p>' : ''}
+                `;
+                document.getElementById('eventModal').style.display = 'block';
+            }
+        }
+
+        function formatDate(dateStr) {
+            const date = new Date(dateStr + 'T00:00:00');
+            return date.toLocaleDateString('en-US', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+        }
+
+        function updateEventsList() {
+            const eventsSection = document.getElementById('events');
+            let filteredEvents = events;
+            
+            if (currentTab !== 'all') {
+                filteredEvents = events.filter(event => event.type === currentTab);
+            }
+            
+            // Show events for current month
+            const monthEvents = filteredEvents.filter(event => {
+                const eventDate = new Date(event.date + 'T00:00:00');
+                return eventDate.getMonth() === currentMonth && eventDate.getFullYear() === currentYear;
+            });
+            
+            let html = '';
+            if (monthEvents.length === 0) {
+                html = `
+                    <div class="event-card">
+                        <h3>No events this month</h3>
+                        <p>Check other months or ${isAdminLoggedIn ? 'add new events using the admin panel.' : 'check back later for updates.'}</p>
+                    </div>
+                `;
+            } else {
+                monthEvents.forEach(event => {
+                    html += `
+                        <div class="event-card" onclick="showEventDetails(${event.id})">
+                            <span class="event-type ${event.type}">${event.type === 'upcoming' ? 'Upcoming Event' : 'Historical Event'}</span>
+                            <h3>${event.title}</h3>
+                            <div class="event-date">${formatDate(event.date)}</div>
+                            <div class="event-description">${event.description.length > 150 ? event.description.substring(0, 150) + '...' : event.description}</div>
+                            ${isAdminLoggedIn ? `<button onclick="deleteEvent(${event.id}); event.stopPropagation();" class="delete-btn">Delete</button>` : ''}
+                        </div>
+                    `;
+                });
+            }
+            
+            eventsSection.innerHTML = html;
+        }
+
+        function showEventDetails(eventId) {
+            const event = events.find(e => e.id === eventId);
+            if (!event) return;
+
+            const eventDetails = `
+                <h3>${event.title}</h3>
+                <div style="padding: 1rem; border: 1px solid #ecf0f1; border-radius: 5px;">
+                    <p><strong>Date:</strong> ${formatDate(event.date)}</p>
+                    <p><strong>Time:</strong> ${event.time}</p>
+                    <p><strong>Location:</strong> ${event.location}</p>
+                    <p><strong>Type:</strong> ${event.type === 'upcoming' ? 'Upcoming Event' : 'Historical Event'}</p>
+                    <p><strong>Description:</strong></p>
+                    <p>${event.description}</p>
+                    ${isAdminLoggedIn ? `<button onclick="deleteEvent(${event.id})" class="delete-btn" style="margin-top: 1rem;">Delete Event</button>` : ''}
+                </div>
+            `;
+            
+            document.getElementById('eventDetails').innerHTML = eventDetails;
+            document.getElementById('eventModal').style.display = 'block';
+        }
+
+        // Modal functions
+        function showAdminLogin() {
+            document.getElementById('adminModal').style.display = 'block';
+        }
+
+        function showAddEventModal() {
+            if (!isAdminLoggedIn) {
+                showError('You must be logged in as an admin to add events');
+                return;
+            }
+            document.getElementById('addEventModal').style.display = 'block';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+            // Clear any error messages
+            const errorDivs = document.querySelectorAll('#login-error, #event-error');
+            errorDivs.forEach(div => div.innerHTML = '');
+        }
+
+        // Utility functions
+        function showError(message, containerId = null) {
+            if (containerId) {
+                document.getElementById(containerId).innerHTML = `<div class="error">${message}</div>`;
+            } else {
+                // Create a temporary error message at the top of the page
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error';
+                errorDiv.textContent = message;
+                errorDiv.style.position = 'fixed';
+                errorDiv.style.top = '20px';
+                errorDiv.style.left = '50%';
+                errorDiv.style.transform = 'translateX(-50%)';
+                errorDiv.style.zIndex = '9999';
+                errorDiv.style.maxWidth = '80%';
+                
+                document.body.appendChild(errorDiv);
+                
+                setTimeout(() => {
+                    document.body.removeChild(errorDiv);
+                }, 5000);
+            }
+        }
+
+        function showSuccess(message) {
+            const successDiv = document.createElement('div');
+            successDiv.className = 'success';
+            successDiv.textContent = message;
+            successDiv.style.position = 'fixed';
+            successDiv.style.top = '20px';
+            successDiv.style.left = '50%';
+            successDiv.style.transform = 'translateX(-50%)';
+            successDiv.style.zIndex = '9999';
+            successDiv.style.maxWidth = '80%';
+            
+            document.body.appendChild(successDiv);
+            
+            setTimeout(() => {
+                document.body.removeChild(successDiv);
+            }, 3000);
+        }
+
+        // Event listeners
+        document.getElementById('adminForm').addEventListener('submit', handleAdminLogin);
+        document.getElementById('addEventForm').addEventListener('submit', handleAddEvent);
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        }
+
+        // Set up real-time subscriptions (optional - for live updates)
+        supabase
+            .channel('events')
+            .on('postgres_changes', 
+                { 
+                    event: '*', 
+                    schema: 'public', 
+                    table: 'events' 
+                }, 
+                async (payload) => {
+                    console.log('Real-time update:', payload);
+                    await loadEvents();
+                    generateCalendar();
+                    updateEventsList();
+                }
+            )
+            .subscribe();
+    </script>
 </body>
 </html>
