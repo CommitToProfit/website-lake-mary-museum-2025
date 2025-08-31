@@ -627,7 +627,7 @@
             <h2>Admin Login</h2>
             <div id="login-error"></div>
             <form id="adminForm">
-                <input type="text" id="username" placeholder="Username" required>
+                <input type="email" id="email" placeholder="Email" required>
                 <input type="password" id="password" placeholder="Password" required>
                 <button type="submit">Login</button>
             </form>
@@ -677,7 +677,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <script>
-        // *** REPLACE THESE WITH YOUR ACTUAL SUPABASE CREDENTIALS ***
+        // Supabase configuration
         const SUPABASE_URL = 'https://xpvfzipjxjitzgkrexju.supabase.co'
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhwdmZ6aXBqeGppdHpna3JleGp1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY0ODcxMDEsImV4cCI6MjA3MjA2MzEwMX0.kIZ3XY0Yn_kY_e3kUlhOfEFrUqCINzzuB5RHfIW2Aeo'
         
@@ -690,10 +690,19 @@
         let currentYear = currentDate.getFullYear();
         let currentTab = 'all';
         let isAdminLoggedIn = false;
+        let currentUser = null;
         let events = [];
 
         // Initialize the app when page loads
         document.addEventListener('DOMContentLoaded', async function() {
+            // Check if user is already logged in
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user && user.user_metadata?.role === 'admin') {
+                isAdminLoggedIn = true;
+                currentUser = user;
+                document.getElementById('adminPanel').style.display = 'block';
+            }
+
             await loadEvents();
             generateCalendar();
             updateEventsList();
@@ -717,62 +726,48 @@
             }
         }
 
-        // Admin login
+        // SECURE Admin login using Supabase Auth
         async function handleAdminLogin(e) {
             e.preventDefault();
-            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
 
             try {
-                console.log('Attempting login with username:', username, 'password:', password);
-                
-                // First, let's see all users in the table for debugging
-                const { data: allUsers, error: allError } = await supabase
-                    .from('admin_users')
-                    .select('*');
-                
-                console.log('All users in database:', allUsers, allError);
-                
-                // Now try the specific query
-                const { data, error } = await supabase
-                    .from('admin_users')
-                    .select('*')
-                    .eq('username', username)
-                    .single();
+                // Use Supabase's built-in authentication
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password,
+                });
 
-                console.log('Login query result:', data, error);
-                
-                if (error) {
-                    console.log('Database error:', error);
-                    throw error;
-                }
+                if (error) throw error;
 
-                if (data && data.password_hash === password) {
+                // Check if user has admin role
+                const user = data.user;
+                console.log('User data:', user);
+                
+                if (user && user.user_metadata?.role === 'admin') {
                     isAdminLoggedIn = true;
+                    currentUser = user;
                     document.getElementById('adminPanel').style.display = 'block';
                     closeModal('adminModal');
-                    updateEventsList(); // Refresh to show delete buttons
+                    updateEventsList();
                     showSuccess('Admin login successful!');
-                    
-                    // Update last_login
-                    await supabase
-                        .from('admin_users')
-                        .update({ last_login: new Date().toISOString() })
-                        .eq('id', data.id);
                 } else {
-                    showError('Invalid username or password', 'login-error');
+                    throw new Error('Insufficient permissions - admin role required');
                 }
             } catch (error) {
                 console.error('Login error:', error);
-                showError('Login failed. Please try again.', 'login-error');
+                showError('Login failed: ' + error.message, 'login-error');
             }
         }
 
-        // Add new event
+        // SECURE Add new event
         async function handleAddEvent(e) {
             e.preventDefault();
             
-            if (!isAdminLoggedIn) {
+            // Check authentication status
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user || user.user_metadata?.role !== 'admin') {
                 showError('You must be logged in as an admin to add events');
                 return;
             }
@@ -787,6 +782,7 @@
             };
 
             try {
+                // The RLS policies will automatically check if user is authenticated
                 const { data, error } = await supabase
                     .from('events')
                     .insert([eventData])
@@ -803,13 +799,14 @@
                 document.getElementById('addEventForm').reset();
             } catch (error) {
                 console.error('Error adding event:', error);
-                showError('Failed to add event. Please try again.', 'event-error');
+                showError('Failed to add event: ' + error.message, 'event-error');
             }
         }
 
-        // Delete event
+        // SECURE Delete event
         async function deleteEvent(eventId) {
-            if (!isAdminLoggedIn) {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user || user.user_metadata?.role !== 'admin') {
                 showError('You must be logged in as an admin to delete events');
                 return;
             }
@@ -817,6 +814,7 @@
             if (!confirm('Are you sure you want to delete this event?')) return;
 
             try {
+                // RLS policies will check authentication
                 const { error } = await supabase
                     .from('events')
                     .delete()
@@ -831,17 +829,41 @@
                 showSuccess('Event deleted successfully!');
             } catch (error) {
                 console.error('Error deleting event:', error);
-                showError('Failed to delete event. Please try again.');
+                showError('Failed to delete event: ' + error.message);
             }
         }
 
-        // Logout
-        function logout() {
-            isAdminLoggedIn = false;
-            document.getElementById('adminPanel').style.display = 'none';
-            updateEventsList();
-            showSuccess('Logged out successfully!');
+        // SECURE Logout
+        async function logout() {
+            try {
+                await supabase.auth.signOut();
+                isAdminLoggedIn = false;
+                currentUser = null;
+                document.getElementById('adminPanel').style.display = 'none';
+                updateEventsList();
+                showSuccess('Logged out successfully!');
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
         }
+
+        // Listen for auth changes
+        supabase.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_IN') {
+                const user = session?.user;
+                if (user && user.user_metadata?.role === 'admin') {
+                    isAdminLoggedIn = true;
+                    currentUser = user;
+                    document.getElementById('adminPanel').style.display = 'block';
+                    updateEventsList();
+                }
+            } else if (event === 'SIGNED_OUT') {
+                isAdminLoggedIn = false;
+                currentUser = null;
+                document.getElementById('adminPanel').style.display = 'none';
+                updateEventsList();
+            }
+        });
 
         // Calendar functions
         function generateCalendar() {
@@ -1049,7 +1071,9 @@
                 document.body.appendChild(errorDiv);
                 
                 setTimeout(() => {
-                    document.body.removeChild(errorDiv);
+                    if (document.body.contains(errorDiv)) {
+                        document.body.removeChild(errorDiv);
+                    }
                 }, 5000);
             }
         }
@@ -1068,7 +1092,9 @@
             document.body.appendChild(successDiv);
             
             setTimeout(() => {
-                document.body.removeChild(successDiv);
+                if (document.body.contains(successDiv)) {
+                    document.body.removeChild(successDiv);
+                }
             }, 3000);
         }
 
