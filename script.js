@@ -1,59 +1,229 @@
+// Supabase configuration
+const SUPABASE_URL = 'https://xpvfzipjxjitzgkrexju.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhwdmZ6aXBqeGppdHpna3JleGp1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY0ODcxMDEsImV4cCI6MjA3MjA2MzEwMX0.kIZ3XY0Yn_kY_e3kUlhOfEFrUqCINzzuB5RHfIW2Aeo';
+
+// Initialize Supabase client
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 // Global state
 let currentDate = new Date();
 let currentMonth = currentDate.getMonth();
 let currentYear = currentDate.getFullYear();
 let currentTab = 'all';
 let isAdminLoggedIn = false;
+let currentUser = null;
+let events = [];
 
-// Sample events data
-let events = [
-    {
-        id: 1,
-        date: '2025-08-15',
-        title: 'Military Appreciation Day',
-        type: 'upcoming',
-        description: 'Join us for our annual Military Appreciation Day featuring exhibits, presentations, and activities honoring our local veterans and military history. Special guest speakers and military vehicle displays will be featured throughout the day.',
-        location: 'Main Gallery',
-        time: '10:00 AM - 4:00 PM'
-    },
-    {
-        id: 2,
-        date: '2025-07-18',
-        title: 'Lake Mary Incorporation Anniversary',
-        type: 'historical',
-        description: 'On this day in 1970, Lake Mary was officially incorporated as a city. The small community had grown from a railroad stop to a thriving suburban town, marking the beginning of its modern era.',
-        location: 'Historical Reference',
-        time: 'All Day'
-    },
-    {
-        id: 3,
-        date: '2025-08-25',
-        title: 'The Founding of Florida Exhibit Opening',
-        type: 'upcoming',
-        description: 'Our new summer exhibit exploring the early history of Florida and its impact on the Central Florida region. Features artifacts, interactive displays, and educational programs for all ages.',
-        location: 'Special Exhibitions Hall',
-        time: '9:00 AM - 5:00 PM'
-    },
-    {
-        id: 4,
-        date: '2025-08-04',
-        title: 'Independence Day Celebration',
-        type: 'upcoming',
-        description: 'Celebrate America\'s birthday with historical presentations, colonial demonstrations, and patriotic activities for the whole family.',
-        location: 'Museum Grounds',
-        time: '11:00 AM - 3:00 PM'
-    },
-    {
-        id: 5,
-        date: '2025-08-12',
-        title: 'Orange County Settlement Day',
-        type: 'historical',
-        description: 'Commemorating the day in 1845 when the first permanent settlers arrived in what would become Orange County, establishing the foundation for communities like Lake Mary.',
-        location: 'Historical Reference',
-        time: 'All Day'
+// Initialize the app when page loads
+document.addEventListener('DOMContentLoaded', async function() {
+    // Check if user is already logged in
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user && user.user_metadata?.role === 'admin') {
+        isAdminLoggedIn = true;
+        currentUser = user;
+        document.getElementById('adminPanel').style.display = 'block';
     }
-];
 
+    await loadEvents();
+    generateCalendar();
+    updateEventsList();
+
+    // Initialize event listeners
+    setupEventListeners();
+});
+
+// Setup event listeners
+function setupEventListeners() {
+    document.getElementById('adminForm').addEventListener('submit', handleAdminLogin);
+    document.getElementById('addEventForm').addEventListener('submit', handleAddEvent);
+
+    // Close modal when clicking outside
+    window.onclick = function(event) {
+        const modals = document.querySelectorAll('.modal');
+        modals.forEach(modal => {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+    };
+
+    // Listen for auth changes
+    supabase.auth.onAuthStateChange((event, session) => {
+        if (event === 'SIGNED_IN') {
+            const user = session?.user;
+            if (user && user.user_metadata?.role === 'admin') {
+                isAdminLoggedIn = true;
+                currentUser = user;
+                document.getElementById('adminPanel').style.display = 'block';
+                updateEventsList();
+            }
+        } else if (event === 'SIGNED_OUT') {
+            isAdminLoggedIn = false;
+            currentUser = null;
+            document.getElementById('adminPanel').style.display = 'none';
+            updateEventsList();
+        }
+    });
+
+    // Set up real-time subscriptions
+    supabase
+        .channel('events')
+        .on('postgres_changes', 
+            { 
+                event: '*', 
+                schema: 'public', 
+                table: 'events' 
+            }, 
+            async (payload) => {
+                console.log('Real-time update:', payload);
+                await loadEvents();
+                generateCalendar();
+                updateEventsList();
+            }
+        )
+        .subscribe();
+}
+
+// Load events from Supabase
+async function loadEvents() {
+    try {
+        const { data, error } = await supabase
+            .from('events')
+            .select('*')
+            .order('date', { ascending: true });
+
+        if (error) throw error;
+        
+        events = data || [];
+        console.log('Loaded events:', events);
+    } catch (error) {
+        console.error('Error loading events:', error);
+        showError('Failed to load events from database');
+    }
+}
+
+// SECURE Admin login using Supabase Auth
+async function handleAdminLogin(e) {
+    e.preventDefault();
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+
+    try {
+        // Use Supabase's built-in authentication
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email: email,
+            password: password,
+        });
+
+        if (error) throw error;
+
+        // Check if user has admin role
+        const user = data.user;
+        console.log('User data:', user);
+        
+        if (user && user.user_metadata?.role === 'admin') {
+            isAdminLoggedIn = true;
+            currentUser = user;
+            document.getElementById('adminPanel').style.display = 'block';
+            closeModal('adminModal');
+            updateEventsList();
+            showSuccess('Admin login successful!');
+        } else {
+            throw new Error('Insufficient permissions - admin role required');
+        }
+    } catch (error) {
+        console.error('Login error:', error);
+        showError('Login failed: ' + error.message, 'login-error');
+    }
+}
+
+// SECURE Add new event
+async function handleAddEvent(e) {
+    e.preventDefault();
+    
+    // Check authentication status
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user || user.user_metadata?.role !== 'admin') {
+        showError('You must be logged in as an admin to add events');
+        return;
+    }
+
+    const eventData = {
+        title: document.getElementById('eventTitle').value,
+        description: document.getElementById('eventDescription').value,
+        date: document.getElementById('eventDate').value,
+        time: document.getElementById('eventTime').value || '10:00 AM - 4:00 PM',
+        location: document.getElementById('eventLocation').value || 'Museum Gallery',
+        type: document.getElementById('eventType').value
+    };
+
+    try {
+        // The RLS policies will automatically check if user is authenticated
+        const { data, error } = await supabase
+            .from('events')
+            .insert([eventData])
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        events.push(data);
+        closeModal('addEventModal');
+        generateCalendar();
+        updateEventsList();
+        showSuccess('Event added successfully!');
+        document.getElementById('addEventForm').reset();
+    } catch (error) {
+        console.error('Error adding event:', error);
+        showError('Failed to add event: ' + error.message, 'event-error');
+    }
+}
+
+// SECURE Delete event
+async function deleteEvent(eventId) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user || user.user_metadata?.role !== 'admin') {
+        showError('You must be logged in as an admin to delete events');
+        return;
+    }
+
+    if (!confirm('Are you sure you want to delete this event?')) return;
+
+    try {
+        // RLS policies will check authentication
+        const { error } = await supabase
+            .from('events')
+            .delete()
+            .eq('id', eventId);
+
+        if (error) throw error;
+
+        events = events.filter(event => event.id !== eventId);
+        generateCalendar();
+        updateEventsList();
+        closeModal('eventModal');
+        showSuccess('Event deleted successfully!');
+    } catch (error) {
+        console.error('Error deleting event:', error);
+        showError('Failed to delete event: ' + error.message);
+    }
+}
+
+// SECURE Logout
+async function logout() {
+    try {
+        await supabase.auth.signOut();
+        isAdminLoggedIn = false;
+        currentUser = null;
+        document.getElementById('adminPanel').style.display = 'none';
+        updateEventsList();
+        showSuccess('Logged out successfully!');
+    } catch (error) {
+        console.error('Logout error:', error);
+    }
+}
+
+// Calendar functions
 function generateCalendar() {
     const monthNames = ["January", "February", "March", "April", "May", "June",
         "July", "August", "September", "October", "November", "December"];
@@ -125,10 +295,10 @@ function switchTab(tab) {
 function showDayEvents(date) {
     const dayEvents = events.filter(event => event.date === date);
     if (dayEvents.length > 0) {
-        let eventDetails = '<h3>Events on ' + formatDate(date) + '</h3>';
+        let eventDetails = `<h3>Events on ${formatDate(date)}</h3>`;
         dayEvents.forEach(event => {
             eventDetails += `
-                <div class="event-detail">
+                <div style="padding: 1rem; border: 1px solid #ecf0f1; border-radius: 5px; margin: 1rem 0;">
                     <h4>${event.title}</h4>
                     <p><strong>Type:</strong> ${event.type === 'upcoming' ? 'Upcoming Event' : 'Historical Event'}</p>
                     <p><strong>Time:</strong> ${event.time}</p>
@@ -151,25 +321,13 @@ function showDayEvents(date) {
 }
 
 function formatDate(dateStr) {
-    const date = new Date(dateStr);
+    const date = new Date(dateStr + 'T00:00:00');
     return date.toLocaleDateString('en-US', { 
         weekday: 'long', 
         year: 'numeric', 
         month: 'long', 
         day: 'numeric' 
     });
-}
-
-function showAdminLogin() {
-    document.getElementById('adminModal').style.display = 'block';
-}
-
-function closeModal(modalId) {
-    document.getElementById(modalId).style.display = 'none';
-}
-
-function showAddEventModal() {
-    document.getElementById('addEventModal').style.display = 'block';
 }
 
 function updateEventsList() {
@@ -182,25 +340,30 @@ function updateEventsList() {
     
     // Show events for current month
     const monthEvents = filteredEvents.filter(event => {
-        const eventDate = new Date(event.date);
+        const eventDate = new Date(event.date + 'T00:00:00');
         return eventDate.getMonth() === currentMonth && eventDate.getFullYear() === currentYear;
     });
     
     let html = '';
-    monthEvents.forEach(event => {
-        html += `
-            <div class="event-card" onclick="showEventDetails(${event.id})">
-                <span class="event-type ${event.type}">${event.type === 'upcoming' ? 'Upcoming Event' : 'Historical Event'}</span>
-                <h3>${event.title}</h3>
-                <div class="event-date">${formatDate(event.date)}</div>
-                <div class="event-description">${event.description.substring(0, 150)}...</div>
-                ${isAdminLoggedIn ? `<button onclick="deleteEvent(${event.id}); event.stopPropagation();" class="delete-btn">Delete</button>` : ''}
+    if (monthEvents.length === 0) {
+        html = `
+            <div class="event-card">
+                <h3>No events this month</h3>
+                <p>Check other months or ${isAdminLoggedIn ? 'add new events using the admin panel.' : 'check back later for updates.'}</p>
             </div>
         `;
-    });
-    
-    if (html === '') {
-        html = '<div class="event-card"><h3>No events this month</h3><p>Check other months or add new events if you\'re an admin.</p></div>';
+    } else {
+        monthEvents.forEach(event => {
+            html += `
+                <div class="event-card" onclick="showEventDetails(${event.id})">
+                    <span class="event-type ${event.type}">${event.type === 'upcoming' ? 'Upcoming Event' : 'Historical Event'}</span>
+                    <h3>${event.title}</h3>
+                    <div class="event-date">${formatDate(event.date)}</div>
+                    <div class="event-description">${event.description.length > 150 ? event.description.substring(0, 150) + '...' : event.description}</div>
+                    ${isAdminLoggedIn ? `<button onclick="deleteEvent(${event.id}); event.stopPropagation();" class="delete-btn">Delete</button>` : ''}
+                </div>
+            `;
+        });
     }
     
     eventsSection.innerHTML = html;
@@ -208,117 +371,87 @@ function updateEventsList() {
 
 function showEventDetails(eventId) {
     const event = events.find(e => e.id === eventId);
-    if (event) {
-        let eventDetails = `
-            <h3>${event.title}</h3>
-            <div class="event-detail">
-                <p><strong>Date:</strong> ${formatDate(event.date)}</p>
-                <p><strong>Time:</strong> ${event.time}</p>
-                <p><strong>Location:</strong> ${event.location}</p>
-                <p><strong>Type:</strong> ${event.type}</p>
-                <p><strong>Description:</strong> ${event.description}</p>
-                ${isAdminLoggedIn ? `<button onclick="deleteEvent(${event.id})" class="delete-btn">Delete Event</button>` : ''}
-            </div>
-        `;
-        document.getElementById('eventDetails').innerHTML = eventDetails;
-        document.getElementById('eventModal').style.display = 'block';
-    }
-}
+    if (!event) return;
 
-function deleteEvent(eventId) {
-    if (confirm('Are you sure you want to delete this event?')) {
-        events = events.filter(e => e.id !== eventId);
-        generateCalendar();
-        updateEventsList();
-        closeModal('eventModal');
-        alert('Event deleted successfully!');
-    }
-}
-
-function logout() {
-    isAdminLoggedIn = false;
-    document.getElementById('adminPanel').style.display = 'none';
-    document.querySelector('.admin-login').style.display = 'block';
-    generateCalendar();
-    updateEventsList();
-    alert('Successfully logged out');
-}
-
-// Event listeners
-document.getElementById('adminForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
+    const eventDetails = `
+        <h3>${event.title}</h3>
+        <div style="padding: 1rem; border: 1px solid #ecf0f1; border-radius: 5px;">
+            <p><strong>Date:</strong> ${formatDate(event.date)}</p>
+            <p><strong>Time:</strong> ${event.time}</p>
+            <p><strong>Location:</strong> ${event.location}</p>
+            <p><strong>Type:</strong> ${event.type === 'upcoming' ? 'Upcoming Event' : 'Historical Event'}</p>
+            <p><strong>Description:</strong></p>
+            <p>${event.description}</p>
+            ${isAdminLoggedIn ? `<button onclick="deleteEvent(${event.id})" class="delete-btn" style="margin-top: 1rem;">Delete Event</button>` : ''}
+        </div>
+    `;
     
-    if (username === 'admin' && password === 'museum123') {
-        isAdminLoggedIn = true;
-        document.getElementById('adminPanel').style.display = 'block';
-        document.querySelector('.admin-login').style.display = 'none';
-        closeModal('adminModal');
-        generateCalendar();
-        updateEventsList();
-        
-        document.getElementById('adminForm').reset();
-        alert('Successfully logged in as administrator');
-    } else {
-        alert('Invalid credentials. Please check your username and password.');
-        document.getElementById('password').value = '';
-    }
-});
+    document.getElementById('eventDetails').innerHTML = eventDetails;
+    document.getElementById('eventModal').style.display = 'block';
+}
 
-document.getElementById('addEventForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    const title = document.getElementById('eventTitle').value.trim();
-    const description = document.getElementById('eventDescription').value.trim();
-    const date = document.getElementById('eventDate').value;
-    const type = document.getElementById('eventType').value;
-    
-    if (!title || !description || !date || !type) {
-        alert('Please fill in all required fields.');
+// Modal functions
+function showAdminLogin() {
+    document.getElementById('adminModal').style.display = 'block';
+}
+
+function showAddEventModal() {
+    if (!isAdminLoggedIn) {
+        showError('You must be logged in as an admin to add events');
         return;
     }
-    
-    const eventDate = new Date(date);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    if (type === 'upcoming' && eventDate < today) {
-        if (!confirm('This date is in the past. Are you sure you want to add this as an upcoming event?')) {
-            return;
-        }
-    }
-    
-    const newEvent = {
-        id: events.length > 0 ? Math.max(...events.map(e => e.id)) + 1 : 1,
-        title: title,
-        description: description,
-        date: date,
-        type: type,
-        location: type === 'historical' ? 'Historical Reference' : 'Museum Gallery',
-        time: type === 'historical' ? 'All Day' : '10:00 AM - 4:00 PM'
-    };
-    
-    events.push(newEvent);
-    generateCalendar();
-    updateEventsList();
-    closeModal('addEventModal');
-    
-    document.getElementById('addEventForm').reset();
-    alert(`Event "${title}" has been successfully added!`);
-});
-
-// Close modal when clicking outside
-window.onclick = function(event) {
-    const modals = document.querySelectorAll('.modal');
-    modals.forEach(modal => {
-        if (event.target === modal) {
-            modal.style.display = 'none';
-        }
-    });
+    document.getElementById('addEventModal').style.display = 'block';
 }
 
-// Initialize calendar and events on page load
-document.addEventListener('DOMContentLoaded', function() {
-    generateCalendar();
-    updateEventsList();
-});
+function closeModal(modalId) {
+    document.getElementById(modalId).style.display = 'none';
+    // Clear any error messages
+    const errorDivs = document.querySelectorAll('#login-error, #event-error');
+    errorDivs.forEach(div => div.innerHTML = '');
+}
+
+// Utility functions
+function showError(message, containerId = null) {
+    if (containerId) {
+        document.getElementById(containerId).innerHTML = `<div class="error">${message}</div>`;
+    } else {
+        // Create a temporary error message at the top of the page
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'error';
+        errorDiv.textContent = message;
+        errorDiv.style.position = 'fixed';
+        errorDiv.style.top = '20px';
+        errorDiv.style.left = '50%';
+        errorDiv.style.transform = 'translateX(-50%)';
+        errorDiv.style.zIndex = '9999';
+        errorDiv.style.maxWidth = '80%';
+        
+        document.body.appendChild(errorDiv);
+        
+        setTimeout(() => {
+            if (document.body.contains(errorDiv)) {
+                document.body.removeChild(errorDiv);
+            }
+        }, 5000);
+    }
+}
+
+function showSuccess(message) {
+    const successDiv = document.createElement('div');
+    successDiv.className = 'success';
+    successDiv.textContent = message;
+    successDiv.style.position = 'fixed';
+    successDiv.style.top = '20px';
+    successDiv.style.left = '50%';
+    successDiv.style.transform = 'translateX(-50%)';
+    successDiv.style.zIndex = '9999';
+    successDiv.style.maxWidth = '80%';
+    
+    document.body.appendChild(successDiv);
+    
+    setTimeout(() => {
+        if (document.body.contains(successDiv)) {
+            document.body.removeChild(successDiv);
+        }
+    }, 3000);
+}
